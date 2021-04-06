@@ -1,6 +1,8 @@
 require('dotenv').config()
 const Discord = require("discord.js");
 const ytdl = require("ytdl-core");
+const YouTube = require("simple-youtube-api");
+const numeral = require('numeral');
 
 const client = new Discord.Client();
 const queue = new Map();
@@ -48,8 +50,6 @@ const v9 = '828525723211268118';
 const v9_name = '9_';
 const v10 = '828525723542487050';
 const v10_name = '10';
-
-
 
 
 client.on("ready", () => {
@@ -177,6 +177,7 @@ function f_sum(spreadsheetId, sheetName, callback) {
             for (let i = 1; i < values.length; i++) {
                 total = total + parseInt(values[i]);
             }
+            total = numeral(total).format('0,0');//change format
             callback(total)
         } catch (error) {
             console.log(error.message, error.stack);
@@ -184,7 +185,6 @@ function f_sum(spreadsheetId, sheetName, callback) {
     }
     GetSpreadSheetValues();
 }
-
 function f_getData(spreadsheetId, sheetName, callback) {
     async function GetSpreadSheetValues() {
         try {
@@ -204,6 +204,7 @@ function f_getData(spreadsheetId, sheetName, callback) {
 }
 //function for music-------------------------
 async function f_execute(message, serverQueue) {
+    const youtube = new YouTube(process.env.YOUTUBE_API);
     const args = message.content.split(" ");
 
     const voiceChannel = message.member.voice.channel;
@@ -217,46 +218,79 @@ async function f_execute(message, serverQueue) {
             "I need the permissions to join and speak in your voice channel!"
         );
     }
-    ytdl.getInfo('Muzzy - Endgame').then(info => {
-        // info.items[0] contains information of the first search result
-        console.log(info.items[0].url)    
-    })
-    const songInfo = await ytdl.getInfo(args[2]);
-    //console.log(songInfo);
-    const song = {
-        title: songInfo.videoDetails.title,
-        url: songInfo.videoDetails.video_url,
-    };
-
-    if (!serverQueue) {
-        const queueContruct = {
-            textChannel: message.channel,
-            voiceChannel: voiceChannel,
-            connection: null,
-            songs: [],
-            volume: 5,
-            playing: true
+    if(args[2].includes('list=')){
+        youtube.getPlaylist(args[2])
+        .then(playlist => {
+            playlist.getVideos()
+                .then( async songInfo => {
+                    var songList = [];
+                    for(let i = 0;i<songInfo.length;i++){
+                        var song = {
+                            title: songInfo[i].title,
+                            url: 'https://www.youtube.com/watch?v='+songInfo[i].id,
+                        };
+                        songList.push(song);
+                    }
+                    if (!serverQueue) {
+                        const queueContruct = {
+                            textChannel: message.channel,
+                            voiceChannel: voiceChannel,
+                            connection: null,
+                            songs: [],
+                            volume: 5,
+                            playing: true
+                        };
+                        queue.set(message.guild.id, queueContruct);
+                        for(let i = 1;i<songList.length;i++){
+                            queueContruct.songs.push(songList[i]);
+                        }
+                        try {
+                            var connection = await voiceChannel.join();
+                            queueContruct.connection = connection;
+                            f_play(message.guild, queueContruct.songs[0]);
+                        } catch (err) {
+                            console.log(err);
+                            queue.delete(message.guild.id);
+                            return message.channel.send(err);
+                        }
+                    }
+                })
+                .catch(console.log);
+        })
+        .catch(console.log);
+    }else{
+        const songInfo = await ytdl.getInfo(args[2]);
+        const song = {
+            title: songInfo.videoDetails.title,
+            url: songInfo.videoDetails.video_url,
         };
-
-        queue.set(message.guild.id, queueContruct);
-
-        queueContruct.songs.push(song);
-
-        try {
-            var connection = await voiceChannel.join();
-            queueContruct.connection = connection;
-            f_play(message.guild, queueContruct.songs[0]);
-        } catch (err) {
-            console.log(err);
-            queue.delete(message.guild.id);
-            return message.channel.send(err);
+        if (!serverQueue) {
+            const queueContruct = {
+                textChannel: message.channel,
+                voiceChannel: voiceChannel,
+                connection: null,
+                songs: [],
+                volume: 5,
+                playing: true
+            };
+            queue.set(message.guild.id, queueContruct);
+            queueContruct.songs.push(song);
+            try {
+                var connection = await voiceChannel.join();
+                queueContruct.connection = connection;
+                f_play(message.guild, queueContruct.songs[0]);
+            } catch (err) {
+                console.log(err);
+                queue.delete(message.guild.id);
+                return message.channel.send(err);
+            }
+        } else {
+            serverQueue.songs.push(song);
+            return message.channel.send(`${song.title} has been added to the queue!`);
         }
-    } else {
-        serverQueue.songs.push(song);
-        return message.channel.send(`${song.title} has been added to the queue!`);
     }
+    
 }
-
 function f_skip(message, serverQueue) {
     if (!message.member.voice.channel)
         return message.channel.send(
@@ -266,7 +300,6 @@ function f_skip(message, serverQueue) {
         return message.channel.send("There is no song that I could skip!");
     serverQueue.connection.dispatcher.end();
 }
-
 function f_stop(message, serverQueue) {
     if (!message.member.voice.channel)
         return message.channel.send(
@@ -279,7 +312,6 @@ function f_stop(message, serverQueue) {
     serverQueue.songs = [];
     serverQueue.connection.dispatcher.end();
 }
-
 function f_play(guild, song) {
     const serverQueue = queue.get(guild.id);
     if (!song) {
@@ -298,4 +330,6 @@ function f_play(guild, song) {
     dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
     serverQueue.textChannel.send(`I'm singing: **${song.title}**`);
 }
+
+
 client.login(process.env.TOKEN);
