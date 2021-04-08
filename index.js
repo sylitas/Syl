@@ -15,13 +15,15 @@ const play = "play";
 const skip = "skip";
 const stop = "stop";
 const c_queue = "queue";
-const currency = "VNĐ";
 const clear = "clear";
 //--End lib
 
 
 client.on("ready", () => {
-    console.log("I'm on");
+    console.log("Who is called my name ???, Daddy's home");
+});
+client.on('guildMemberAdd', member => {
+    member.guild.channels.get('channelID').send("Welcome to our channel, You can call me Syl and I'm your assistant bot, created by Sylitas, who is home owner"); 
 });
 client.on("message", msg => {
     if (msg.author.bot) return;
@@ -40,19 +42,7 @@ client.on("message", msg => {
                     sign = str;
                 }
                 break;
-                //For testing bot
-            case test:
-                if (message[1] === test) {
-                    msg.reply("Hello;World");
-                }
-                break;
-                //For Helping
-            case help:
-                if (message[1] === help) {
-                    msg.reply(`https://help.syl.com`);
-                }
-                break;
-                //For playing song
+            //For playing music form Youtube
             case play:
                 if (message.length < 3) {
                     msg.reply("Play what ???");
@@ -97,9 +87,7 @@ client.on("message", msg => {
         msg.reply("Using`" + prefix + "help` for more detail");
     }
 });
-client.on('guildMemberAdd', member => {
-    member.guild.channels.get('channelID').send("Welcome to our channel, You can call me Syl and I'm your assistant bot, created by Sylitas, master of this home"); 
-});
+
 
 //function for music-------------------------
 async function f_execute(message, serverQueue) {
