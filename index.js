@@ -311,7 +311,6 @@ async function f_execute(message, serverQueue) {
                         url : 'https://www.youtube.com/watch?v=' + video.id,
                     }
                     songList.push(first_video);
-                    console.log("Here");
                     youtube.getPlaylist(args[2])
                     .then(playlist => {
                         playlist.getVideos()
