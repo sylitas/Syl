@@ -6,11 +6,9 @@ const YouTube = require("simple-youtube-api");
 const client = new Discord.Client();
 const queue = new Map();
 
-let prefix = "-s ";
+let prefix = "~";
 //--lib
 const change = "change";
-const test = "test";
-const help = "help";
 const play = "play";
 const skip = "skip";
 const stop = "stop";
@@ -26,66 +24,61 @@ client.on('guildMemberAdd', member => {
     member.guild.channels.get('channelID').send("Welcome to our channel, You can call me Syl and I'm your assistant bot, created by Sylitas, who is home owner"); 
 });
 client.on("message", msg => {
-    if (msg.author.bot) return;
     if (msg.channel.type != 'text' || msg.author.bot || !msg.content.startsWith(prefix)) {
         return;
     }
     let message = msg.content.split(" "); // "prefix" + message[1] + message[2] + message[3] ...
-    if (message.length >= 2) {
-        const serverQueue = queue.get(msg.guild.id);
-        switch (message[1]) {
-            //For changing prefix valuable
-            case change:
-                let str = "-" + msg.content.charAt(msg.content.length - 1) + " ";
-                if (str !== sign) {
-                    msg.reply(`I had changed ${sign} to ${str}`);
-                    sign = str;
-                }
-                break;
-            //For playing music form Youtube
-            case play:
-                if (message.length < 3) {
-                    msg.reply("Play what ???");
-                } else {
-                    f_execute(msg, serverQueue);
-                }
-                break;
-            case skip:
-                f_skip(msg, serverQueue);
-                break;
-            case stop:
-                f_stop(msg, serverQueue);
-                break;
-            case c_queue:
-                if(serverQueue.songs.length == 0){
-                    msg.channel.send("What are you looking for ? Playlist ?I'm not singing now dude !!?!")
-                }else{
-                    let playlist = serverQueue.songs;
-                    let content = "Playlist:";
-                    if(playlist.length>11){
-                        for(let i=0;i<10;i++){
-                            let count = i+1;
-                            content += `\n` + `${count}: ${playlist[i].title}`;
-                            if(i == 9){
-                                content = content + `\n` + `...`;
-                            }
-                        }
-                    }else{
-                        for(let i=0;i<playlist.length;i++){
-                            content += `\n` + `${i+1}: ${playlist[i].title}`
+    const serverQueue = queue.get(msg.guild.id);
+    switch (message[0].replace("~","")) {
+        //For changing prefix valuable
+        case change:
+            let str = "-" + msg.content.charAt(msg.content.length - 1) + " ";
+            if (str !== sign) {
+                msg.reply(`I had changed ${sign} to ${str}`);
+                sign = str;
+            }
+            break;
+        //For playing music form Youtube
+        case play:
+            if (message.length < 2) {
+                msg.reply("Play what ???");
+            } else {
+                f_execute(msg, serverQueue);
+            }
+            break;
+        case skip:
+            f_skip(msg, serverQueue);
+            break;
+        case stop:
+            f_stop(msg, serverQueue);
+            break;
+        case c_queue:
+            if(serverQueue.songs.length == 0){
+                msg.channel.send("What are you looking for ? Playlist ?I'm not singing now dude !!?!")
+            }else{
+                let playlist = serverQueue.songs;
+                let content = "Playlist:";
+                if(playlist.length>11){
+                    for(let i=0;i<10;i++){
+                        let count = i+1;
+                        content += `\n` + `${count}: ${playlist[i].title}`;
+                        if(i == 9){
+                            content = content + `\n` + `...`;
                         }
                     }
-                    msg.channel.send(content);
+                }else{
+                    for(let i=0;i<playlist.length;i++){
+                        content += `\n` + `${i+1}: ${playlist[i].title}`
+                    }
                 }
-                break;
-            case clear:
-                serverQueue.songs = [];
-                f_play(msg.guild, serverQueue.songs[0]);
-                msg.reply("Why i need to clean the list for u ??? However, because of my kindness, so i did it");
+                msg.channel.send(content);
             }
-    } else {
-        msg.reply("Using`" + prefix + "help` for more detail");
-    }
+            break;
+        case clear:
+            serverQueue.songs = [];
+            f_play(msg.guild, serverQueue.songs[0]);
+            msg.reply("Why i need to clean the list for u ??? However, because of my kindness, so i did it");
+        }
 });
 
 
@@ -105,9 +98,9 @@ async function f_execute(message, serverQueue) {
             "No permissions to join and sing for you guys! Give me it!?!!"
         );
     }
-    if (args[2].includes('list=')) {//for whole playlist
-        if(args[2].includes('start_radio=')){//if the url contain "start_radio=" --> youtube generate automatically
-            youtube.getVideo(args[2])
+    if (args[1].includes('list=')) {//for whole playlist
+        if(args[1].includes('start_radio=')){//if the url contain "start_radio=" --> youtube generate automatically
+            youtube.getVideo(args[1])
             .then(video => {
                 var songList = [];
                 var first_video= {
@@ -115,7 +108,7 @@ async function f_execute(message, serverQueue) {
                     url : 'https://www.youtube.com/watch?v=' + video.id,
                 }
                 songList.push(first_video);
-                youtube.getPlaylist(args[2])
+                youtube.getPlaylist(args[1])
                 .then(playlist => {
                     playlist.getVideos()
                         .then(async songInfo => {
@@ -158,8 +151,8 @@ async function f_execute(message, serverQueue) {
                 .catch(console.log);
             })
             .catch(console.log);
-        }else if(args[2].includes('v=')){//if the url contain "v=" --> user's playlist
-                youtube.getVideo(args[2])
+        }else if(args[1].includes('v=')){//if the url contain "v=" --> user's playlist
+                youtube.getVideo(args[1])
                 .then(video => {
                     var songList = [];
                     var first_video= {
@@ -167,7 +160,7 @@ async function f_execute(message, serverQueue) {
                         url : 'https://www.youtube.com/watch?v=' + video.id,
                     }
                     songList.push(first_video);
-                    youtube.getPlaylist(args[2])
+                    youtube.getPlaylist(args[1])
                     .then(playlist => {
                         playlist.getVideos()
                             .then(async songInfo => {
@@ -213,7 +206,7 @@ async function f_execute(message, serverQueue) {
                 })
                 .catch(console.log);
         }else{
-            youtube.getPlaylist(args[2])
+            youtube.getPlaylist(args[1])
             .then(playlist => {
                 playlist.getVideos()
                     .then(async songInfo => {
@@ -254,7 +247,7 @@ async function f_execute(message, serverQueue) {
             .catch(console.log);
         }
     } else { //for single song
-        const songInfo = await ytdl.getInfo(args[2]);
+        const songInfo = await ytdl.getInfo(args[1]);
         const song = {
             title: songInfo.videoDetails.title,
             url: songInfo.videoDetails.video_url,
